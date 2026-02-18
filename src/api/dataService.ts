@@ -17,7 +17,7 @@ export interface Inquiry {
   qtnValue: number;
   qtnCost: number;
   qtnProfit: number;
-  qtnMargin: string;
+  qtnMargin: number;
   marginPercent: number;
   discountPercent: string;
   qtnStatus: string;
@@ -72,7 +72,7 @@ export async function fetchSheetData(): Promise<Inquiry[]> {
               qtnValue: parseNumber(row['PDA / QTN VALUE']),
               qtnCost: parseNumber(row['PDA / QTN  COST'] || row['PDA / QTN COST']),
               qtnProfit: parseNumber(row['PDA / QTN PROFIT']),
-              qtnMargin: row['PDA / QTN MARGIN'] || '',
+              qtnMargin: parseNumber(row['PDA / QTN MARGIN']),
               marginPercent: parseNumber(row['MARGIN %']),
               discountPercent: row['DISCOUNT %'] || '',
               qtnStatus: (row['QTN STATUS'] || '').trim(),

@@ -2,18 +2,13 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { fetchSheetData } from './api/dataService';
 import type { Inquiry } from './api/dataService';
 import {
-  PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid
-} from 'recharts';
-import {
-  DollarSign, TrendingUp, Download, Ship, ClipboardList, CheckCircle
+  DollarSign, TrendingUp, Ship, ClipboardList, CheckCircle, CreditCard
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Papa from 'papaparse';
+
 
 import Login from './components/Login';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 const REFRESH_INTERVAL = 20 * 1000; // 20 seconds
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,59 +53,48 @@ const App: React.FC = () => {
     };
   }, [loadData]);
 
-  const stats = useMemo(() => {
-    const totalQtnValue = inquiries.reduce((acc, s) => acc + s.qtnValue, 0);
-    const totalProfit = inquiries.reduce((acc, s) => acc + s.qtnProfit, 0);
-    const totalInquiries = inquiries.length;
-    const confirmedOrders = inquiries.filter(s => s.update === 'CONFIRMED').length;
 
-    return { totalQtnValue, totalProfit, totalInquiries, confirmedOrders };
+
+  const filteredInquiries = useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentDate = today.getDate();
+    const currentMonthName = today.toLocaleString('default', { month: 'long' }).toUpperCase(); // "FEBRUARY"
+
+    return inquiries.filter(item => {
+      // Basic matching: year, date, and month string
+      // Note: item.month from dataService might be descriptive, so we check inclusion
+      const itemMonth = (item.month || '').toUpperCase();
+
+      return (
+        item.year === currentYear &&
+        item.date === currentDate &&
+        itemMonth.includes(currentMonthName)
+      );
+    });
   }, [inquiries]);
+
+  const stats = useMemo(() => {
+    const totalQtnValue = filteredInquiries.reduce((acc, s) => acc + s.qtnValue, 0);
+    const totalCost = filteredInquiries.reduce((acc, s) => acc + (s.qtnCost || 0), 0);
+    const totalProfit = filteredInquiries.reduce((acc, s) => acc + s.qtnProfit, 0);
+    const totalQtnMargin = filteredInquiries.reduce((acc, s) => acc + (s.qtnMargin || 0), 0);
+    const totalInquiries = filteredInquiries.length;
+    const confirmedOrders = filteredInquiries.filter(s => s.update === 'CONFIRMED').length;
+
+    return { totalQtnValue, totalCost, totalProfit, totalQtnMargin, totalInquiries, confirmedOrders };
+  }, [filteredInquiries]);
 
   // Auto-scroll to bottom of table when inquiries update
   useEffect(() => {
     if (tableContainerRef.current) {
       tableContainerRef.current.scrollTop = tableContainerRef.current.scrollHeight;
     }
-  }, [inquiries]);
+  }, [filteredInquiries]);
 
-  const statusData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    inquiries.forEach(s => {
-      const status = s.update || 'UNKNOWN';
-      counts[status] = (counts[status] || 0) + 1;
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [inquiries]);
 
-  const financialData = useMemo(() => {
-    const grouped: Record<string, { name: string; Cost: number; Profit: number; Revenue: number }> = {};
-    inquiries.forEach(s => {
-      const key = s.vesselName || 'Unknown';
-      if (!grouped[key]) {
-        grouped[key] = { name: key, Cost: 0, Profit: 0, Revenue: 0 };
-      }
-      grouped[key].Cost += s.qtnCost;
-      grouped[key].Profit += s.qtnProfit;
-      grouped[key].Revenue += s.qtnValue;
-    });
-    return Object.values(grouped)
-      .sort((a, b) => b.Revenue - a.Revenue)
-      .slice(0, 10);
-  }, [inquiries]);
 
-  const handleDownload = () => {
-    const csv = Papa.unparse(inquiries);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `inquiry_data_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(val);
@@ -144,17 +128,7 @@ const App: React.FC = () => {
           <p style={{ color: '#94a3b8' }}>Real-time Operations Summary • {currentTime.toLocaleDateString()}</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button
-            onClick={handleDownload}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.6rem 1.25rem', background: '#3b82f6', color: 'white',
-              border: 'none', borderRadius: '0.5rem', fontWeight: 600, cursor: 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-            }}
-          >
-            <Download size={18} /> Export Data
-          </button>
+
           <div style={{ background: '#1e293b', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontFamily: 'monospace' }}>
             {currentTime.toLocaleTimeString()}
           </div>
@@ -162,117 +136,99 @@ const App: React.FC = () => {
       </header>
 
       {/* Stats Grid */}
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem', flexShrink: 0 }}>
-        <StatCard
-          label="Total QTN Value"
-          value={formatCurrency(stats.totalQtnValue)}
-          icon={<DollarSign size={24} color="#3b82f6" />}
-        />
-        <StatCard
-          label="Total Profit"
-          value={formatCurrency(stats.totalProfit)}
-          icon={<TrendingUp size={24} color={stats.totalProfit >= 0 ? '#10b981' : '#ef4444'} />}
-        />
-        <StatCard
-          label="Total Inquiries"
-          value={stats.totalInquiries.toString()}
-          icon={<ClipboardList size={24} color="#f59e0b" />}
-        />
-        <StatCard
-          label="Confirmed Orders"
-          value={stats.confirmedOrders.toString()}
-          icon={<CheckCircle size={24} color="#10b981" />}
-        />
+      {/* Stats Section: Split Layout */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '1.5rem', marginBottom: '1.5rem', flexShrink: 0 }}>
+
+        {/* Left Column: Operational Metrics & Category Insights */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* Operational Metrics Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+            <StatCard
+              label="Total Inquiries"
+              value={stats.totalInquiries.toString()}
+              icon={<ClipboardList color="#f59e0b" />}
+            />
+            <StatCard
+              label="Confirmed Orders"
+              value={stats.confirmedOrders.toString()}
+              icon={<CheckCircle color="#10b981" />}
+            />
+            <StatCard
+              label="Pending"
+              value={filteredInquiries.filter(i => i.update === 'PENDING').length.toString()}
+              icon={<Ship color="#3b82f6" />}
+            />
+            <StatCard
+              label="Cancelled"
+              value={filteredInquiries.filter(i => i.update === 'CANCELLED').length.toString()}
+              icon={<Ship color="#ef4444" />}
+            />
+          </div>
+
+          {/* Category Insights Section */}
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <CategoryCard
+              label="PRO Outcomes"
+              count={filteredInquiries.filter(i => i.category === 'PRO').length}
+              total={stats.totalInquiries}
+              color="#60a5fa"
+              bg="rgba(59,130,246,0.15)"
+            />
+            <CategoryCard
+              label="DEC Outcomes"
+              count={filteredInquiries.filter(i => i.category === 'DEC').length}
+              total={stats.totalInquiries}
+              color="#fbbf24"
+              bg="rgba(245,158,11,0.15)"
+            />
+            <CategoryCard
+              label="ENG Outcomes"
+              count={filteredInquiries.filter(i => i.category === 'ENG').length}
+              total={stats.totalInquiries}
+              color="#a78bfa"
+              bg="rgba(139,92,246,0.15)"
+            />
+          </div>
+
+        </div>
+
+        {/* Right: Financial Summary Panel (Totals of N, O, P, Q) */}
+        <div style={{
+          background: '#1e293b',
+          borderRadius: '1rem',
+          border: '1px solid #334155',
+          padding: '1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center'
+        }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#94a3b8', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <DollarSign size={16} /> Financial Overview
+          </h3>
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total QTN Value</span>
+              <span style={{ fontWeight: 600, color: '#60a5fa' }}>{formatCurrency(stats.totalQtnValue)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total QTN Cost</span>
+              <span style={{ fontWeight: 600, color: '#ef4444' }}>{formatCurrency(stats.totalCost)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total Profit</span>
+              <span style={{ fontWeight: 600, color: stats.totalProfit >= 0 ? '#10b981' : '#f87171' }}>{formatCurrency(stats.totalProfit)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid #334155' }}>
+              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total QTN Margin</span>
+              <span style={{ fontWeight: 600, color: '#f59e0b' }}>{formatCurrency(stats.totalQtnMargin)}</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Main Content Area: Charts & Table Side-by-Side */}
       <div style={{ display: 'flex', gap: '1.5rem', flex: 1, minHeight: 0 }}>
-        {/* Charts Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '38%', overflowY: 'auto', paddingRight: '0.5rem' }}>
-          {/* Quotation Status Breakdown */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{ background: '#1e293b', borderRadius: '1rem', padding: '1.25rem', border: '1px solid #334155', flex: 1, display: 'flex', flexDirection: 'column' }}
-          >
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ClipboardList size={18} color="#3b82f6" /> Inquiry Status
-            </h3>
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ cx, cy, midAngle = 0, outerRadius: oR, name, value, percent = 0 }: any) => {
-                      const RADIAN = Math.PI / 180;
-                      const radius = oR + 30;
-                      const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                      const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                      const totalPct = (percent * 100).toFixed(0);
-                      return (
-                        <text x={x} y={y} fill="#e2e8f0" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={11} fontWeight={600}>
-                          {`${name} ${value} (${totalPct}%)`}
-                        </text>
-                      );
-                    }}
-                    labelLine={{ stroke: '#64748b', strokeWidth: 1 }}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-status-${index}`} fill={STATUS_COLORS[entry.name] || COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: '#0f172a', borderColor: '#334155', color: '#fff' }} />
-                  <Legend verticalAlign="bottom" height={30} wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          {/* Financial Performance */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            style={{ background: '#1e293b', borderRadius: '1rem', padding: '1.25rem', border: '1px solid #334155', flex: 1, display: 'flex', flexDirection: 'column' }}
-          >
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <DollarSign size={18} color="#3b82f6" /> Financial Performance
-            </h3>
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={financialData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: '#94a3b8', fontSize: 10 }}
-                    angle={-30}
-                    textAnchor="end"
-                    height={60}
-                    interval={0}
-                  />
-                  <YAxis
-                    tick={{ fill: '#94a3b8', fontSize: 10 }}
-                    tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '0.5rem' }}
-                    formatter={(value: any) => [`$${Number(value).toLocaleString()}`]}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
-                  <Bar dataKey="Cost" fill="#ef4444" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="Profit" fill="#10b981" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="Revenue" fill="#3b82f6" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-        </div>
 
         {/* Data Grid Column */}
         <motion.section
@@ -297,26 +253,30 @@ const App: React.FC = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1e293b' }}>
                 <tr style={{ borderBottom: '2px solid #334155', textAlign: 'left' }}>
-                  <th style={thStyle}>#</th>
-                  <th style={thStyle}>Date</th>
+                  <th style={thStyle}>Op #</th>
                   <th style={thStyle}>Vessel</th>
                   <th style={thStyle}>Port</th>
                   <th style={thStyle}>Principal</th>
+                  <th style={thStyle}>Service</th>
+                  <th style={thStyle}>PIC</th>
                   <th style={thStyle}>Cat.</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>QTN Value</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>QTN Cost</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>Profit</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>QTN Margin</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>Margin %</th>
                   <th style={thStyle}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {inquiries.map((s, idx) => (
+                {filteredInquiries.map((s, idx) => (
                   <tr key={`${s.rowNum}-${idx}`} style={{ borderBottom: '1px solid #334155', background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
-                    <td style={{ ...tdStyle, fontWeight: 500 }}>{s.rowNum}</td>
-                    <td style={{ ...tdStyle, color: '#cbd5e1' }}>{s.date}/{s.month?.replace(/^\d+\.\s*/, '')?.slice(0, 3)}</td>
+                    <td style={{ ...tdStyle, fontWeight: 500 }}>{s.folderNumber}</td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#60a5fa' }}>{s.vesselName}</td>
                     <td style={tdStyle}>{s.port}</td>
                     <td style={{ ...tdStyle, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.principal}</td>
+                    <td style={tdStyle}>{s.service}</td>
+                    <td style={tdStyle}>{s.pic}</td>
                     <td style={tdStyle}>
                       <span style={{
                         padding: '0.15rem 0.5rem',
@@ -330,9 +290,11 @@ const App: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right', color: '#cbd5e1' }}>{formatCurrency(s.qtnValue)}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: '#cbd5e1' }}>{formatCurrency(s.qtnCost)}</td>
                     <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600, color: s.qtnProfit > 0 ? '#34d399' : s.qtnProfit < 0 ? '#f87171' : '#94a3b8' }}>
                       {s.qtnProfit > 0 ? '+' : ''}{formatCurrency(s.qtnProfit)}
                     </td>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: '#cbd5e1' }}>{s.qtnMargin}</td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>{s.marginPercent}%</td>
                     <td style={tdStyle}>
                       <span style={{
@@ -352,8 +314,8 @@ const App: React.FC = () => {
             </table>
           </div>
         </motion.section>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 
@@ -374,16 +336,38 @@ const StatCard = ({ label, value, icon }: { label: string, value: string, icon: 
   <motion.div
     initial={{ scale: 0.95, opacity: 0 }}
     animate={{ scale: 1, opacity: 1 }}
-    style={{ background: '#1e293b', borderRadius: '1rem', padding: '1.5rem', border: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '1rem' }}
+    style={{ background: '#1e293b', borderRadius: '0.75rem', padding: '1rem', border: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
   >
-    <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '0.75rem' }}>
-      {icon}
+    <div style={{ padding: '0.6rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '0.5rem' }}>
+      {React.cloneElement(icon as any, { size: 20 })}
     </div>
     <div>
-      <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{label}</p>
-      <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff' }}>{value}</p>
+      <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.15rem' }}>{label}</p>
+      <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>{value}</p>
     </div>
   </motion.div>
 );
+
+const CategoryCard = ({ label, count, total, color, bg }: { label: string, count: number, total: number, color: string, bg: string }) => {
+  const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+
+  return (
+    <div style={{ background: '#1e293b', borderRadius: '0.75rem', padding: '1rem', border: '1px solid #334155', flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#cbd5e1' }}>{label}</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.1rem 0.4rem', borderRadius: '4px', background: bg, color: color }}>
+          {percentage}%
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+        <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff' }}>{count}</span>
+        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>inquiries</span>
+      </div>
+      <div style={{ height: '4px', width: '100%', background: '#334155', borderRadius: '2px', marginTop: '0.75rem', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${percentage}%`, background: color, borderRadius: '2px' }} />
+      </div>
+    </div>
+  );
+};
 
 export default App;
