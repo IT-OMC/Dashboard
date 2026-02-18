@@ -1,22 +1,47 @@
 import Papa from 'papaparse';
 
-export interface Shipment {
-  id: string;
-  date: string;
+export interface Inquiry {
+  rowNum: number;
+  year: number;
+  month: string;
+  date: number;
+  folderNumber: string;
+  week: string;
   vesselName: string;
-  origin: string;
-  destination: string;
-  payloadTeu: number;
-  revenue: number;
-  cost: number;
-  profit: number;
-  fuelEfficiency: number;
+  eta: string;
+  port: string;
+  principal: string;
+  country: string;
+  service: string;
+  category: string;
+  qtnValue: number;
+  qtnCost: number;
+  qtnProfit: number;
+  qtnMargin: string;
+  marginPercent: number;
+  discountPercent: string;
+  qtnStatus: string;
+  update: string;
+  contactPerson: string;
+  contactNumber: string;
+  contactEmail: string;
+  pic: string;
+  clientStatus: string;
+  remarks: string;
+  rfqNumber: string;
 }
 
 // Published Google Sheet URL (CSV format)
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXvjE-mlJ3PfgoCZ_HIkimGGnrG4Uug36Xw1Vv--HuAcK7_eSNwX7BhhMWIjJO5QpvDUlkVdGkZaNp/pub?output=csv';
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTzviiDXwQOIfOleh7HfKMNm0JURn7uv3RxKp9-nJ0llY_J5KA1dXPWdCD4QWY6rQ/pub?gid=685993509&single=true&output=csv';
 
-export async function fetchSheetData(): Promise<Shipment[]> {
+function parseNumber(val: string | undefined | null): number {
+  if (!val) return 0;
+  const cleaned = String(val).replace(/[^0-9.\-]+/g, '');
+  const num = Number(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+export async function fetchSheetData(): Promise<Inquiry[]> {
   try {
     const response = await fetch(GOOGLE_SHEET_CSV_URL);
     if (!response.ok) {
@@ -30,34 +55,48 @@ export async function fetchSheetData(): Promise<Shipment[]> {
         skipEmptyLines: true,
         complete: (results) => {
           const parsedData = results.data.map((row: any) => {
-            // Parse Route "Origin ➔ Destination"
-            const routeStr = row['Route (Origin-Dest)'] || '';
-            const [origin, destination] = routeStr.includes('➔')
-              ? routeStr.split('➔').map((s: string) => s.trim())
-              : ['Unknown', 'Unknown'];
-
             return {
-              id: row['Shipment ID'] || `SHP-${Math.floor(Math.random() * 10000)}`,
-              date: row['Date (Dep.)'] || new Date().toISOString().split('T')[0],
-              vesselName: row['Vessel Name'] || 'Unknown Vessel',
-              origin: origin,
-              destination: destination,
-              payloadTeu: Number(String(row['Payload (TEUs)'] || 0).replace(/[^0-9.-]+/g, "")),
-              revenue: Number(String(row['Revenue ($)'] || 0).replace(/[^0-9.-]+/g, "")),
-              cost: Number(String(row['Op. Costs ($)'] || 0).replace(/[^0-9.-]+/g, "")),
-              profit: Number(String(row['Profit/Loss ($)'] || 0).replace(/[^0-9.-]+/g, "")), // Handles +$280,000 and -$85,000
-              fuelEfficiency: Number(String(row['Fuel Efficiency (MT/nm)'] || 0).replace(/[^0-9.-]+/g, ""))
+              rowNum: parseNumber(row['']) || 0,
+              year: parseNumber(row['YEAR']),
+              month: row['MONTH'] || '',
+              date: parseNumber(row['DATE']),
+              folderNumber: row['FOLDER NUMBER'] || '',
+              week: row['WEEK '] || row['WEEK'] || '',
+              vesselName: (row['VESSEL NAME'] || '').trim(),
+              eta: row['ETA'] || '',
+              port: row['PORT'] || '',
+              principal: row['PRINCIPAL'] || '',
+              country: row['COUNTRY'] || '',
+              service: row['SERVICE'] || '',
+              category: row['CATEGORY'] || '',
+              qtnValue: parseNumber(row['PDA / QTN VALUE']),
+              qtnCost: parseNumber(row['PDA / QTN  COST'] || row['PDA / QTN COST']),
+              qtnProfit: parseNumber(row['PDA / QTN PROFIT']),
+              qtnMargin: row['PDA / QTN MARGIN'] || '',
+              marginPercent: parseNumber(row['MARGIN %']),
+              discountPercent: row['DISCOUNT %'] || '',
+              qtnStatus: (row['QTN STATUS'] || '').trim(),
+              update: (row['UPDATE'] || '').trim(),
+              contactPerson: (row['CONTACT PERSON '] || row['CONTACT PERSON'] || '').trim(),
+              contactNumber: row['CONTACT NUMBER'] || '',
+              contactEmail: row["CONTACT PERSON'S EMAIL"] || '',
+              pic: row['PIC'] || '',
+              clientStatus: row['CLIENT STATUS'] || '',
+              remarks: row['REMARKS'] || '',
+              rfqNumber: row['RFQ NUMBERS / ITEM DESCRIPTION'] || '',
             };
           });
 
-          // Filter out rows that might be totally empty or invalid headers repeated
-          const validData = parsedData.filter(item => item.vesselName !== 'Unknown Vessel' || item.revenue !== 0);
+          // Filter out rows that have no vessel name and no value
+          const validData = parsedData.filter(
+            (item) => item.vesselName || item.qtnValue > 0 || item.rowNum > 0
+          );
 
           resolve(validData);
         },
         error: (error: Error) => {
           reject(error);
-        }
+        },
       });
     });
   } catch (error) {
