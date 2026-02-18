@@ -43,7 +43,8 @@ function parseNumber(val: string | undefined | null): number {
 
 export async function fetchSheetData(): Promise<Inquiry[]> {
   try {
-    const response = await fetch(GOOGLE_SHEET_CSV_URL);
+    // Add a unique timestamp parameter to bypass browser/CDN caching
+    const response = await fetch(`${GOOGLE_SHEET_CSV_URL}&t=${Date.now()}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch data: ${response.statusText}`);
     }
