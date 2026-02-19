@@ -57,20 +57,36 @@ const App: React.FC = () => {
 
   const filteredInquiries = useMemo(() => {
     const today = new Date();
+
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
     const currentYear = today.getFullYear();
     const currentDate = today.getDate();
-    const currentMonthName = today.toLocaleString('default', { month: 'long' }).toUpperCase(); // "FEBRUARY"
+    const currentMonthName = today.toLocaleString('default', { month: 'long' }).toUpperCase();
+
+    const prevYear = yesterday.getFullYear();
+    const prevDate = yesterday.getDate();
+    const prevMonthName = yesterday.toLocaleString('default', { month: 'long' }).toUpperCase();
 
     return inquiries.filter(item => {
-      // Basic matching: year, date, and month string
-      // Note: item.month from dataService might be descriptive, so we check inclusion
       const itemMonth = (item.month || '').toUpperCase();
 
-      return (
+      // Check if item matches Today
+      const isToday = (
         item.year === currentYear &&
         item.date === currentDate &&
         itemMonth.includes(currentMonthName)
       );
+
+      // Check if item matches Yesterday
+      const isYesterday = (
+        item.year === prevYear &&
+        item.date === prevDate &&
+        itemMonth.includes(prevMonthName)
+      );
+
+      return isToday || isYesterday;
     });
   }, [inquiries]);
 
@@ -262,13 +278,13 @@ const App: React.FC = () => {
               <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1e293b' }}>
                 <tr style={{ borderBottom: '2px solid #334155', textAlign: 'left' }}>
                   <th style={thStyle}>Op #</th>
+                  <th style={thStyle}>Date</th>
                   <th style={thStyle}>Vessel</th>
                   <th style={thStyle}>Port</th>
                   <th style={thStyle}>Principal</th>
                   <th style={thStyle}>PIC</th>
                   <th style={thStyle}>Service</th>
                   <th style={thStyle}>Cat.</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>QTN Value</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>QTN Cost</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>Profit</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>QTN Margin</th>
@@ -280,6 +296,7 @@ const App: React.FC = () => {
                 {filteredInquiries.map((s, idx) => (
                   <tr key={`${s.rowNum}-${idx}`} style={{ borderBottom: '1px solid #334155', background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
                     <td style={{ ...tdStyle, fontWeight: 500 }}>{s.folderNumber}</td>
+                    <td style={tdStyle}>{s.date} {s.month}</td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#60a5fa' }}>{s.vesselName}</td>
                     <td style={tdStyle}>{s.port}</td>
                     <td style={{ ...tdStyle, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.principal}</td>
@@ -297,7 +314,6 @@ const App: React.FC = () => {
                         {s.category}
                       </span>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'right', color: '#cbd5e1' }}>{formatCurrency(s.qtnValue)}</td>
                     <td style={{ ...tdStyle, textAlign: 'right', color: '#cbd5e1' }}>{formatCurrency(s.qtnCost)}</td>
                     <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600, color: s.qtnProfit > 0 ? '#34d399' : s.qtnProfit < 0 ? '#f87171' : '#94a3b8' }}>
                       {s.qtnProfit > 0 ? '+' : ''}{formatCurrency(s.qtnProfit)}

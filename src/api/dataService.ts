@@ -62,7 +62,7 @@ export async function fetchSheetData(): Promise<Inquiry[]> {
             return {
               rowNum: parseNumber(row[firstHeader]) || 0, // Use dynamic first column for row number too
               year: parseNumber(row['YEAR']),
-              month: row['MONTH'] || '',
+              month: (row['MONTH'] || '').replace(/^[\d.]+/, '').trim(),
               date: parseNumber(row['DATE']),
               folderNumber: row[firstHeader] || '', // Use dynamic first column
               week: row['WEEK '] || row['WEEK'] || '',
