@@ -2,7 +2,10 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { fetchSheetData } from './api/dataService';
 import type { Inquiry } from './api/dataService';
 import {
-  DollarSign, TrendingUp, Ship, ClipboardList, CheckCircle, CreditCard
+  DollarSign,
+  Ship,
+  ClipboardList,
+  CheckCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -294,7 +297,7 @@ const App: React.FC = () => {
               </thead>
               <tbody>
                 {filteredInquiries.map((s, idx) => (
-                  <tr key={`${s.rowNum}-${idx}`} style={{ borderBottom: '1px solid #334155', background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                  <tr key={`${s.rowNum} -${idx} `} style={{ borderBottom: '1px solid #334155', background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
                     <td style={{ ...tdStyle, fontWeight: 500 }}>{s.folderNumber}</td>
                     <td style={tdStyle}>{s.date} {s.month}</td>
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#60a5fa' }}>{s.vesselName}</td>
@@ -326,7 +329,7 @@ const App: React.FC = () => {
                         borderRadius: '9999px',
                         fontSize: '0.75rem',
                         fontWeight: 600,
-                        background: `${getStatusColor(s.update)}20`,
+                        background: `${getStatusColor(s.update)} 20`,
                         color: getStatusColor(s.update),
                       }}>
                         {s.update}
@@ -388,7 +391,7 @@ const CategoryCard = ({ label, count, total, color, bg }: { label: string, count
         <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>inquiries</span>
       </div>
       <div style={{ height: '4px', width: '100%', background: '#334155', borderRadius: '2px', marginTop: '0.75rem', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${percentage}%`, background: color, borderRadius: '2px' }} />
+        <div style={{ height: '100%', width: `${percentage}% `, background: color, borderRadius: '2px' }} />
       </div>
     </div>
   );
