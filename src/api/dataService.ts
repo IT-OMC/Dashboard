@@ -32,7 +32,7 @@ export interface Inquiry {
 }
 
 // Published Google Sheet URL (CSV format)
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTzviiDXwQOIfOleh7HfKMNm0JURn7uv3RxKp9-nJ0llY_J5KA1dXPWdCD4QWY6rQ/pub?gid=685993509&single=true&output=csv';
+const GOOGLE_SHEET_CSV_URL = import.meta.env.VITE_SHEET_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKmvcqLndJ0cQfogCX1Ysk-1JJ9ys7AnXFSJnVABQVKD5rYgQcMalfRVFbh2rQ4A/pub?gid=685993509&single=true&output=csv';
 
 function parseNumber(val: string | undefined | null): number {
   if (!val) return 0;
@@ -55,13 +55,16 @@ export async function fetchSheetData(): Promise<Inquiry[]> {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
+          // implementation_plan.md: Dynamic First Column Mapping
+          const firstHeader = results.meta.fields ? results.meta.fields[0] : 'FOLDER NUMBER';
+
           const parsedData = results.data.map((row: any) => {
             return {
-              rowNum: parseNumber(row['']) || 0,
+              rowNum: parseNumber(row[firstHeader]) || 0, // Use dynamic first column for row number too
               year: parseNumber(row['YEAR']),
               month: row['MONTH'] || '',
               date: parseNumber(row['DATE']),
-              folderNumber: row['FOLDER NUMBER'] || '',
+              folderNumber: row[firstHeader] || '', // Use dynamic first column
               week: row['WEEK '] || row['WEEK'] || '',
               vesselName: (row['VESSEL NAME'] || '').trim(),
               eta: row['ETA'] || '',

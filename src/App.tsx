@@ -125,12 +125,24 @@ const App: React.FC = () => {
           <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Ship className="text-blue-500" /> Operational Dashboard
           </h1>
-          <p style={{ color: '#94a3b8' }}>Real-time Operations Summary • {currentTime.toLocaleDateString()}</p>
+          <p style={{ color: '#94a3b8' }}>Real-time Operations Summary</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-
-          <div style={{ background: '#1e293b', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontFamily: 'monospace' }}>
-            {currentTime.toLocaleTimeString()}
+          <div style={{
+            background: '#1e293b',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '0.75rem',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '1rem',
+            border: '1px solid #334155'
+          }}>
+            <span style={{ fontFamily: 'monospace', fontSize: '2.5rem', fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em', color: '#fff' }}>
+              {currentTime.toLocaleTimeString([], { hour12: false })}
+            </span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 500, color: '#94a3b8' }}>
+              {currentTime.toLocaleDateString()}
+            </span>
           </div>
         </div>
       </header>
@@ -203,25 +215,21 @@ const App: React.FC = () => {
           flexDirection: 'column',
           justifyContent: 'center'
         }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#94a3b8', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <DollarSign size={16} /> Financial Overview
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#94a3b8', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <DollarSign size={20} /> Financial Overview
           </h3>
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gap: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total QTN Value</span>
-              <span style={{ fontWeight: 600, color: '#60a5fa' }}>{formatCurrency(stats.totalQtnValue)}</span>
+              <span style={{ color: '#cbd5e1', fontSize: '1.1rem' }}>Total QTN Value</span>
+              <span style={{ fontWeight: 600, fontSize: '1.25rem', color: '#60a5fa' }}>{formatCurrency(stats.totalQtnValue)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total QTN Cost</span>
-              <span style={{ fontWeight: 600, color: '#ef4444' }}>{formatCurrency(stats.totalCost)}</span>
+              <span style={{ color: '#cbd5e1', fontSize: '1.1rem' }}>Total QTN Cost</span>
+              <span style={{ fontWeight: 600, fontSize: '1.25rem', color: '#ef4444' }}>{formatCurrency(stats.totalCost)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total Profit</span>
-              <span style={{ fontWeight: 600, color: stats.totalProfit >= 0 ? '#10b981' : '#f87171' }}>{formatCurrency(stats.totalProfit)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid #334155' }}>
-              <span style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>Total QTN Margin</span>
-              <span style={{ fontWeight: 600, color: '#f59e0b' }}>{formatCurrency(stats.totalQtnMargin)}</span>
+              <span style={{ color: '#cbd5e1', fontSize: '1.1rem' }}>Total Profit</span>
+              <span style={{ fontWeight: 600, fontSize: '1.25rem', color: stats.totalProfit >= 0 ? '#10b981' : '#f87171' }}>{formatCurrency(stats.totalProfit)}</span>
             </div>
           </div>
         </div>
@@ -257,8 +265,8 @@ const App: React.FC = () => {
                   <th style={thStyle}>Vessel</th>
                   <th style={thStyle}>Port</th>
                   <th style={thStyle}>Principal</th>
-                  <th style={thStyle}>Service</th>
                   <th style={thStyle}>PIC</th>
+                  <th style={thStyle}>Service</th>
                   <th style={thStyle}>Cat.</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>QTN Value</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>QTN Cost</th>
@@ -275,8 +283,8 @@ const App: React.FC = () => {
                     <td style={{ ...tdStyle, fontWeight: 600, color: '#60a5fa' }}>{s.vesselName}</td>
                     <td style={tdStyle}>{s.port}</td>
                     <td style={{ ...tdStyle, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.principal}</td>
-                    <td style={tdStyle}>{s.service}</td>
                     <td style={tdStyle}>{s.pic}</td>
+                    <td style={tdStyle}>{s.service}</td>
                     <td style={tdStyle}>
                       <span style={{
                         padding: '0.15rem 0.5rem',

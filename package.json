@@ -13,6 +13,7 @@
     "@types/papaparse": "^5.5.2",
     "framer-motion": "^12.34.1",
     "lucide-react": "^0.574.0",
+    "node-fetch": "^3.3.2",
     "papaparse": "^5.5.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
